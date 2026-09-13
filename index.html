@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Strativue — How the portal works</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -23,6 +23,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
     background: var(--navy-deep);
@@ -31,13 +32,19 @@
   }
   .serif { font-family: 'Source Serif 4', Georgia, serif; }
   .tnum { font-variant-numeric: tabular-nums; }
-  button { font-family: inherit; }
+  button { font-family: inherit; touch-action: manipulation; }
 
   .shell {
     height: 100vh;
+    height: 100dvh;
     display: grid;
     grid-template-rows: 56px 1fr;
   }
+  .top-title { font-size: 12.5px; font-weight: 600; letter-spacing: 0.2px; text-align: center; }
+  .p-nav-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .p-nav-brand .sep { width: 1px; height: 16px; background: rgba(255,255,255,.25); flex-shrink: 0; }
+  .p-nav-brand .shop { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* —— chrome —— */
   .topbar {
@@ -353,13 +360,14 @@
     flex-direction: column;
   }
   .p-nav {
-    height: 48px;
+    min-height: 48px;
     flex-shrink: 0;
     background: var(--navy);
     color: #fcfcfb;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px 16px;
     padding: 0 18px;
   }
   .p-nav .tabs { display: flex; gap: 18px; font-size: 12px; }
@@ -398,6 +406,7 @@
   }
 
   .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .kpis.kpis-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
   .kpi {
     background: #fff;
     border: 1px solid var(--line);
@@ -583,12 +592,12 @@
   }
 
   @media (max-width: 1100px) {
-    body { overflow: auto; }
-    .shell { height: auto; min-height: 100vh; }
+    body { overflow: auto; overflow-x: hidden; }
+    .shell { height: auto; min-height: 100dvh; grid-template-rows: auto 1fr; }
     .stage { grid-template-columns: 1fr; }
-    .topbar { gap: 10px; }
+    .topbar { gap: 10px; padding: 10px 16px; min-height: 56px; flex-wrap: wrap; }
     .tenant span:first-child { display: none; }
-    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2 { grid-template-columns: 1fr 1fr; }
+    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2, .kpis-3 { grid-template-columns: 1fr 1fr; }
     .orbit {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -613,13 +622,81 @@
       margin: 0;
       width: auto;
     }
+    .engine { min-height: 0; overflow: visible; }
+    .engine-main { overflow: visible; }
+    .portal-wrap { min-height: min(100dvh, 900px); }
     .engine-head h1 { font-size: 20px; }
     .engine-head p { font-size: 12.5px; }
+    .table-scroll table { min-width: 560px; }
+  }
+  @media (max-width: 720px) {
+    .top-title { display: none; }
+    .engine {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto;
+    }
+    .engine-rail {
+      grid-column: 1;
+      grid-row: 1;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-right: 0;
+      border-bottom: 1px solid rgba(252,252,251,0.1);
+    }
+    .engine-main { grid-column: 1; grid-row: 2; }
+    .rail-btn { width: 44px; height: 44px; }
+    .p-nav {
+      flex-wrap: wrap;
+      height: auto;
+      padding: 10px 14px 0;
+      align-items: flex-end;
+    }
+    .p-nav-brand { width: 100%; padding-bottom: 6px; }
+    .p-nav .tabs {
+      gap: 4px 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      overflow: visible;
+    }
+    .p-nav .tabs button {
+      flex-shrink: 0;
+      padding: 8px 10px 10px;
+      min-height: 40px;
+    }
+    .p-nav-live { padding-bottom: 10px; }
+    .drawer-panel { width: min(100%, 420px); }
   }
   @media (max-width: 640px) {
-    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2 { grid-template-columns: 1fr; }
+    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2, .kpis-3 { grid-template-columns: 1fr; }
     .steps { grid-template-columns: 1fr; }
-    .p-nav .tabs { gap: 10px; }
+    .topbar {
+      padding: 10px max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
+    }
+    .tenant { font-size: 12px; }
+    .engine-head { padding: 14px 16px 0; }
+    .engine-head h1 { font-size: 22px; }
+    .engine-head h1 br { display: none; }
+    .engine-foot { padding: 0 16px 18px; }
+    .left-panel { padding: 8px 16px 24px; }
+    .portal-wrap { padding: 12px 12px 20px; }
+    .portal-caption { margin: 0 2px 8px; flex-wrap: wrap; gap: 4px; }
+    .flow-note { margin-bottom: 10px; }
+    .p-chrome { padding: 14px 14px 10px; }
+    .p-body { padding: 0 14px 24px; }
+    .toolbar { align-items: stretch; }
+    .toolbar-actions { width: 100%; }
+    .toolbar-actions .dd, .toolbar-actions .ghost-btn, .toolbar-actions .dd-btn {
+      flex: 1;
+      min-width: 0;
+    }
+    .dd-btn, .ghost-btn { width: 100%; justify-content: space-between; min-height: 44px; }
+    .dd-menu { left: 0; right: 0; min-width: 0; }
+    .orbit { padding: 12px 16px 8px; gap: 8px; }
+    .hint { line-height: 1.45; }
+    .drawer { position: fixed; }
+    .drawer-panel { width: 100%; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
   }
 </style>
 </head>
@@ -635,7 +712,7 @@
         <div class="eyebrow">Build intelligence</div>
       </div>
     </div>
-    <div style="font-size:12.5px;font-weight:600;letter-spacing:0.2px;">How the portal actually works</div>
+    <div class="top-title">How the portal actually works</div>
     <div class="tenant">
       <span style="opacity:.7;">Tenant</span>
       <span style="font-weight:600;">Battleborn Upfitters</span>
@@ -668,7 +745,7 @@
       <div class="engine-main">
       <div class="engine-head">
         <div class="eyebrow">Operating model</div>
-        <h1>Five source systems.<br>One living picture.</h1>
+        <h1>Five source systems. One living picture.</h1>
         <p>CRM holds the contract. Shop tools hold the build. Strativue sits in the middle and composes them — it does not replace those systems.</p>
       </div>
 
@@ -771,10 +848,10 @@
 
       <div class="portal">
         <div class="p-nav">
-          <div style="display:flex;align-items:center;gap:12px;">
+          <div class="p-nav-brand">
             <span class="serif" style="font-size:15px;font-weight:700;">STRATIVUE</span>
-            <span style="width:1px;height:16px;background:rgba(255,255,255,.25);"></span>
-            <span style="font-size:12.5px;font-weight:600;">Battleborn Upfitters</span>
+            <span class="sep"></span>
+            <span class="shop">Battleborn Upfitters</span>
           </div>
           <div class="tabs" id="nav-tabs">
             <button type="button" data-view="overview">Overview</button>
@@ -782,7 +859,7 @@
             <button type="button" data-view="reports">Reports</button>
             <button type="button" class="on" data-view="arch">Resources</button>
           </div>
-          <div class="live"><span class="pulse-dot"></span><span style="color:#fcfcfb;opacity:.8;">Composed 2s ago</span></div>
+          <div class="live p-nav-live"><span class="pulse-dot"></span><span style="color:#fcfcfb;opacity:.8;">Composed 2s ago</span></div>
         </div>
 
         <div class="p-chrome">
@@ -869,10 +946,12 @@
           <div class="lower">
             <div class="card widget" data-signals="status schedule labor parts" style="padding:0;overflow:hidden;">
               <h3 style="padding:12px 14px 0;">Vehicle builds — click a row for the composed record</h3>
+              <div class="table-scroll">
               <table>
                 <thead><tr><th>Unit</th><th>Stage</th><th>Done</th><th>Target</th><th>Why it looks like this</th></tr></thead>
                 <tbody id="tbody-overview"></tbody>
               </table>
+              </div>
               <div class="foot-note" id="table-foot"></div>
             </div>
 
@@ -901,10 +980,12 @@
           <div class="view" id="view-vehicles" hidden>
             <div class="card" style="padding:0;overflow:hidden;">
               <h3 style="padding:12px 14px 0;">All units on this contract</h3>
+              <div class="table-scroll">
               <table>
                 <thead><tr><th>Unit</th><th>Vehicle</th><th>Stage</th><th>Done</th><th>Target</th><th>Status</th></tr></thead>
                 <tbody id="tbody-vehicles"></tbody>
               </table>
+              </div>
               <div class="foot-note">Click any row to open the unit. Use the stage dropdown to filter.</div>
             </div>
           </div>
@@ -913,7 +994,7 @@
             <div class="card">
               <h3 id="report-h">Report snapshot — this month</h3>
               <p style="font-size:13px;line-height:1.55;color:var(--mute);margin:8px 0 14px;">This is the same composition as Overview, rolled up for a status meeting. Change the period dropdown to see the numbers move.</p>
-              <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+              <div class="kpis kpis-3">
                 <div class="kpi"><div class="s">On schedule</div><div class="n tnum" id="r-sched">79%</div></div>
                 <div class="kpi"><div class="s">Spend vs contract</div><div class="n tnum" id="r-spend">$187,400</div></div>
                 <div class="kpi"><div class="s">Units at risk</div><div class="n tnum" id="r-risk">3</div></div>
