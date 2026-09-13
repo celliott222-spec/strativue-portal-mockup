@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strativue — How the portal works</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --navy: oklch(0.24 0.05 265);
+    --navy-deep: oklch(0.14 0.03 265);
+    --navy-mid: oklch(0.20 0.045 265);
+    --gold: #d8a94f;
+    --gold-deep: #b8873c;
+    --cream: #f9f9f7;
+    --ink: #0b0b0b;
+    --mute: #52514e;
+    --line: #e1e0d9;
+    --ok: #0ca30c;
+    --warn: #c98500;
+    --crit: #d03b3b;
+    --blue: #2a78d6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--navy-deep);
+    color: #fcfcfb;
+    overflow: hidden;
+  }
+  .serif { font-family: 'Source Serif 4', Georgia, serif; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; }
+
+  .shell {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 56px 1fr;
+  }
+
+  /* —— chrome —— */
+  .topbar {
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    border-bottom: 1px solid rgba(216,169,79,0.22);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    opacity: 0.55;
+  }
+  .tenant {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+  }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--gold-deep);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* —— body —— */
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(380px, 42%) 1fr;
+    min-height: 0;
+  }
+
+  /* —— left: conceptual engine —— */
+  .engine {
+    position: relative;
+    background:
+      radial-gradient(ellipse at 50% 38%, oklch(0.26 0.055 265) 0%, oklch(0.16 0.03 265) 58%, var(--navy-deep) 100%);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    border-right: 1px solid rgba(252,252,251,0.08);
+  }
+  .engine-grid {
+    position: absolute; inset: 0; opacity: 0.055; pointer-events: none;
+    grid-column: 1 / -1; grid-row: 1;
+  }
+  .engine-rail {
+    grid-column: 1; grid-row: 1;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 0;
+    border-right: 1px solid rgba(252,252,251,0.1);
+    background: rgba(0,0,0,0.18);
+  }
+  .rail-btn {
+    position: relative;
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(252,252,251,0.12);
+    background: transparent;
+    color: rgba(252,252,251,0.78);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .rail-btn:hover { border-color: rgba(216,169,79,0.45); color: #fcfcfb; }
+  .rail-btn.is-on {
+    border-color: rgba(216,169,79,0.7);
+    color: #d8a94f;
+    background: rgba(216,169,79,0.1);
+  }
+  .rail-btn svg { width: 18px; height: 18px; }
+  .rail-btn .badge {
+    position: absolute; top: 4px; right: 4px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d8a94f;
+  }
+  .engine-main {
+    grid-column: 2; grid-row: 1;
+    min-width: 0; min-height: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .left-panel {
+    flex: 1; min-height: 0; overflow: auto;
+    padding: 8px 20px 20px;
+  }
+  .left-panel[hidden] { display: none !important; }
+  .req {
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    background: rgba(255,255,255,0.04);
+  }
+  .req .who { font-size: 12.5px; font-weight: 700; }
+  .req .meta { font-size: 11px; color: rgba(252,252,251,0.55); margin-top: 3px; line-height: 1.4; }
+  .pill {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.2px; text-transform: uppercase;
+    border-radius: 4px; padding: 2px 6px; margin-top: 6px;
+  }
+  .pill.wait { color: #d8a94f; border: 1px solid rgba(216,169,79,0.4); }
+  .pill.ok { color: #8fd99a; border: 1px solid rgba(12,163,12,0.35); }
+  .engine-head {
+    position: relative;
+    padding: 16px 24px 0;
+    flex-shrink: 0;
+  }
+  .engine-head h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 6px 0 0;
+    line-height: 1.25;
+  }
+  .engine-head p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(252,252,251,0.68);
+    max-width: 42ch;
+  }
+
+  .orbit {
+    position: relative;
+    flex: 1;
+    min-height: 280px;
+  }
+  .orbit[hidden], .engine-foot[hidden] { display: none !important; }
+  .beams {
+    position: absolute;
+    inset: 8% 10%;
+    width: 80%;
+    height: 84%;
+    margin: auto;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .beams line {
+    stroke: rgba(150,175,214,0.45);
+    stroke-width: 1.2;
+    stroke-dasharray: 5 7;
+    stroke-linecap: round;
+  }
+  .orbit.is-filtered .beams line { stroke: rgba(150,175,214,0.12); }
+  .orbit.is-filtered .beams line.on { stroke: #d8a94f; stroke-width: 2; }
+
+  .hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 118px;
+    height: 118px;
+    margin: -59px 0 0 -59px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, oklch(0.42 0.07 265) 0%, oklch(0.24 0.05 265) 55%, oklch(0.17 0.04 265) 100%);
+    border: 1px solid rgba(216,169,79,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    z-index: 4;
+    cursor: pointer;
+    animation: pulse 3.2s ease-in-out infinite;
+    color: inherit;
+    padding: 0;
+    appearance: none;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(216,169,79,0.35), 0 18px 40px rgba(0,0,0,0.45); }
+    50% { box-shadow: 0 0 0 12px rgba(216,169,79,0), 0 18px 40px rgba(0,0,0,0.45); }
+  }
+  .hub small {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    opacity: 0.65;
+    margin-top: 3px;
+  }
+
+  .node {
+    position: absolute;
+    width: 136px;
+    border: 1px solid rgba(252,252,251,0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    background: oklch(0.22 0.045 265 / 0.96);
+    z-index: 3;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    transition: border-color .25s ease, opacity .25s ease, box-shadow .25s ease;
+  }
+  .node:hover { border-color: rgba(216,169,79,0.55); }
+  .node.is-on {
+    border-color: #d8a94f;
+    box-shadow: 0 0 0 1px rgba(216,169,79,0.35);
+    z-index: 5;
+  }
+  .orbit.is-filtered .node:not(.is-on) { opacity: 0.4; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; margin-bottom: 6px; background: rgba(150,175,214,0.75); }
+  .node.is-on .dot { background: #d8a94f; }
+  .node .label { font-size: 12px; font-weight: 700; }
+  .node .tag { font-size: 10px; color: rgba(252,252,251,0.52); margin-top: 2px; }
+  .node .src { font-size: 9.5px; color: #d8a94f; margin-top: 6px; letter-spacing: 0.15px; }
+
+  .n-schedule { left: 50%; top: 0; margin-left: -68px; }
+  .n-labor    { right: 6%; top: 28%; }
+  .n-parts    { right: 10%; bottom: 8%; }
+  .n-budget   { left: 10%; bottom: 8%; }
+  .n-status   { left: 6%; top: 28%; }
+
+  .engine-foot {
+    position: relative;
+    padding: 0 24px 16px;
+    flex-shrink: 0;
+  }
+  .explainer {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 12px 14px;
+    min-height: 72px;
+  }
+  .explainer .kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--gold);
+  }
+  .explainer .body {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: rgba(252,252,251,0.82);
+    margin-top: 5px;
+  }
+  .hint {
+    font-size: 10.5px;
+    color: rgba(252,252,251,0.38);
+    margin-top: 10px;
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .step {
+    font-size: 10.5px;
+    color: rgba(252,252,251,0.55);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 9px;
+  }
+  .step b { display: block; color: #fcfcfb; font-size: 11px; margin-bottom: 2px; }
+  .step em { font-style: normal; color: var(--gold); font-weight: 700; margin-right: 4px; }
+
+  /* —— right: the portal that those signals become —— */
+  .portal-wrap {
+    background: #ecebe6;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 18px 16px;
+    min-height: 0;
+  }
+  .portal-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0 6px 10px;
+    color: var(--navy);
+  }
+  .portal-caption h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .portal-caption span {
+    font-size: 11px;
+    color: var(--mute);
+  }
+  .portal {
+    flex: 1;
+    min-height: 0;
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 12px;
+    border: 1px solid #cfcfc6;
+    box-shadow: 0 28px 60px rgba(10, 16, 40, 0.28);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .p-nav {
+    height: 48px;
+    flex-shrink: 0;
+    background: var(--navy);
+    color: #fcfcfb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+  }
+  .p-nav .tabs { display: flex; gap: 18px; font-size: 12px; }
+  .p-nav .tabs .on {
+    font-weight: 700;
+    border-bottom: 2px solid var(--gold-deep);
+    padding-bottom: 14px;
+  }
+  .p-nav .tabs span { opacity: 0.65; }
+  .p-chrome {
+    flex-shrink: 0;
+    padding: 16px 18px 12px;
+    position: relative;
+    z-index: 20;
+    background: var(--cream);
+  }
+  .p-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .widget {
+    transition: opacity .35s ease, box-shadow .35s ease, outline-color .35s ease, transform .35s ease;
+    outline: 1px solid transparent;
+    border-radius: 8px;
+  }
+  .widget.dim { opacity: 0.34; transform: scale(0.995); }
+  .widget.lit {
+    outline: 1px solid rgba(184,135,60,0.55);
+    box-shadow: 0 0 0 3px rgba(216,169,79,0.18);
+  }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 13px;
+  }
+  .kpi .n { font-size: 22px; font-weight: 700; margin-top: 6px; }
+  .kpi .s { font-size: 10.5px; color: var(--mute); margin-top: 2px; }
+  .kpi .flag { font-size: 10.5px; font-weight: 600; margin-top: 3px; }
+  .kpi .from { font-size: 10px; color: #898781; margin-top: 6px; }
+  .bar { height: 5px; border-radius: 3px; background: var(--line); margin-top: 7px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 3px; background: var(--blue); }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 13px 14px;
+  }
+  .card h3 { margin: 0 0 10px; font-size: 13px; }
+  .pipe { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+  .stage-col .nm { font-size: 11px; font-weight: 600; color: var(--mute); }
+  .stage-col .n { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .stage-col .strip { height: 4px; border-radius: 2px; margin-top: 6px; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { font-size: 10px; background: #f0efec; border-radius: 4px; padding: 2px 6px; }
+
+  .lower { display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th {
+    text-align: left; font-size: 10px; letter-spacing: 0.3px;
+    text-transform: uppercase; color: #898781; font-weight: 700;
+    padding: 6px 8px; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 8px; border-bottom: 1px solid #f0efec; }
+  tr.alert { background: #fdf6f0; }
+  tr.warn { background: #fdf9ec; }
+  .prog { display: flex; align-items: center; gap: 6px; }
+  .prog .track { width: 40px; height: 4px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .prog .track i { display: block; height: 100%; background: var(--blue); }
+
+  .issue { display: flex; gap: 8px; font-size: 12px; line-height: 1.45; margin-bottom: 10px; align-items: flex-start; }
+  .issue:last-child { margin-bottom: 0; }
+
+  .live {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 2px;
+  }
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 0 rgba(12,163,12,0.5);
+    animation: live 1.8s ease-out infinite;
+  }
+  @keyframes live {
+    70% { box-shadow: 0 0 0 7px rgba(12,163,12,0); }
+  }
+
+  .flow-note {
+    font-size: 11.5px;
+    color: var(--navy);
+    background: #fff;
+    border: 1px dashed rgba(184,135,60,0.55);
+    border-radius: 8px;
+    padding: 9px 12px;
+    min-height: 38px;
+  }
+  .flow-note b { color: var(--gold-deep); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dd { position: relative; z-index: 1; }
+  .dd.open { z-index: 40; }
+  .dd-btn, .ghost-btn {
+    height: 34px; padding: 0 12px;
+    border: 1px solid #c3c2b7; border-radius: 6px;
+    background: #fff; color: var(--ink);
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .ghost-btn { border-color: var(--navy); color: var(--navy); }
+  .dd-btn:hover, .ghost-btn:hover { background: #f4f3ef; }
+  .dd-menu {
+    display: none; position: absolute; top: calc(100% + 5px); right: 0;
+    min-width: 200px; background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 4px; z-index: 50;
+    box-shadow: 0 14px 32px rgba(10,16,40,0.14);
+  }
+  .dd.open .dd-menu { display: block; }
+  .dd-menu button {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent;
+    border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 12.5px; cursor: pointer; color: var(--ink);
+  }
+  .dd-menu button:hover, .dd-menu button.is-on { background: #f4f3ef; }
+  .dd-menu button.is-on { font-weight: 700; }
+  .dd-menu .hint-row { padding: 6px 10px 8px; font-size: 11px; color: var(--mute); }
+
+  .tabs button {
+    background: none; border: 0; color: inherit; font: inherit; font-size: 12px;
+    padding: 0 0 14px; cursor: pointer; opacity: 0.65;
+  }
+  .tabs button.on {
+    font-weight: 700; opacity: 1;
+    border-bottom: 2px solid var(--gold-deep);
+  }
+
+  .kpi, .stage-col, .issue, tr.click { cursor: pointer; }
+  .kpi:hover { border-color: #c3c2b7; }
+  .stage-col {
+    border: 1px solid transparent; border-radius: 8px; padding: 6px; margin: -6px;
+    background: transparent; color: inherit; font: inherit; text-align: left; width: 100%;
+    appearance: none;
+  }
+  .stage-col:hover { border-color: #e1e0d9; }
+  .stage-col.is-on { border-color: rgba(184,135,60,0.7); background: #fdf8ee; }
+  tr.click:hover { background: #f6f5f1; }
+  tr.click.is-on td { box-shadow: inset 3px 0 0 var(--gold-deep); }
+  .issue { border-radius: 8px; padding: 8px; margin: 0 -8px 2px; }
+  .issue:hover { background: #f6f5f1; }
+
+  .portal { position: relative; }
+  .view[hidden] { display: none !important; }
+  .empty { padding: 22px; font-size: 13px; color: var(--mute); }
+  .foot-note { padding: 11px 14px; font-size: 11px; color: #898781; }
+
+  .drawer {
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; justify-content: flex-end;
+  }
+  .drawer[hidden] { display: none; }
+  .drawer-scrim { flex: 1; background: rgba(11,16,32,0.28); }
+  .drawer-panel {
+    width: min(380px, 92%);
+    background: #fff; color: var(--ink);
+    border-left: 1px solid var(--line);
+    overflow: auto; padding: 18px 18px 24px;
+    box-shadow: -18px 0 40px rgba(10,16,40,0.12);
+  }
+  .drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .sig-grid { display: grid; gap: 8px; margin-top: 16px; }
+  .sig { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .sig .k { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #898781; }
+  .sig .v { font-size: 13px; font-weight: 600; margin-top: 3px; }
+  .sig .d { font-size: 11.5px; color: var(--mute); margin-top: 3px; }
+
+  .arch { display: flex; flex-direction: column; gap: 10px; }
+  .arch-row {
+    display: grid; gap: 8px; align-items: stretch;
+  }
+  .arch-row.r3 { grid-template-columns: 1fr 1fr 1fr; }
+  .arch-row.r2 { grid-template-columns: 1fr 1fr; }
+  .arch-row.r1 { grid-template-columns: 1fr; }
+  .arch-box {
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+    background: #fff; cursor: pointer; text-align: left;
+    font: inherit; color: inherit; appearance: none; width: 100%;
+  }
+  .arch-box:hover { border-color: #c3c2b7; }
+  .arch-box.is-on {
+    border-color: rgba(184,135,60,0.7);
+    box-shadow: 0 0 0 3px rgba(216,169,79,0.18);
+  }
+  .arch-box .k { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #898781; }
+  .arch-box .t { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
+  .arch-box .d { font-size: 11.5px; color: var(--mute); margin-top: 4px; line-height: 1.45; }
+  .arch-arrow {
+    text-align: center; font-size: 10.5px; color: #898781; letter-spacing: 0.2px;
+  }
+  .arch-detail {
+    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: #fff;
+    min-height: 88px;
+  }
+  .arch-detail h3 { margin: 0 0 6px; font-size: 14px; }
+  .arch-detail p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--mute); }
+  .lock {
+    display: inline-block; font-size: 10px; font-weight: 700; color: var(--navy);
+    border: 1px solid #c3c2b7; border-radius: 4px; padding: 1px 6px; margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 1100px) {
+    body { overflow: auto; }
+    .shell { height: auto; min-height: 100vh; }
+    .stage { grid-template-columns: 1fr; }
+    .topbar { gap: 10px; }
+    .tenant span:first-child { display: none; }
+    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2 { grid-template-columns: 1fr 1fr; }
+    .orbit {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      min-height: 0;
+      padding: 14px 20px 6px;
+    }
+    .beams { display: none; }
+    .hub {
+      position: relative;
+      left: auto; top: auto;
+      margin: 4px auto;
+      grid-column: 1 / -1;
+      order: -1;
+    }
+    .node {
+      position: relative;
+      left: auto !important;
+      right: auto !important;
+      top: auto !important;
+      bottom: auto !important;
+      margin: 0;
+      width: auto;
+    }
+    .engine-head h1 { font-size: 20px; }
+    .engine-head p { font-size: 12.5px; }
+  }
+  @media (max-width: 640px) {
+    .kpis, .pipe, .lower, .arch-row.r3, .arch-row.r2 { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .p-nav .tabs { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 22 22" fill="none" stroke="#d8a94f" stroke-width="1.2">
+        <circle cx="11" cy="11" r="9"/><circle cx="11" cy="11" r="5.5"/><path d="M11 2v18M2 11h18"/>
+      </svg>
+      <div>
+        <div class="serif" style="font-size:16px;font-weight:700;line-height:1;">STRATIVUE</div>
+        <div class="eyebrow">Build intelligence</div>
+      </div>
+    </div>
+    <div style="font-size:12.5px;font-weight:600;letter-spacing:0.2px;">How the portal actually works</div>
+    <div class="tenant">
+      <span style="opacity:.7;">Tenant</span>
+      <span style="font-weight:600;">Battleborn Upfitters</span>
+      <div class="avatar">BU</div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <aside class="engine">
+      <svg class="engine-grid" viewBox="0 0 800 900" preserveAspectRatio="none">
+        <defs><pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M40 0H0V40" fill="none" stroke="#fcfcfb" stroke-width="1"/>
+        </pattern></defs>
+        <rect width="800" height="900" fill="url(#g)"/>
+      </svg>
+
+      <nav class="engine-rail" aria-label="Access and configuration">
+        <button type="button" class="rail-btn is-on" data-left="model" title="Operating model" aria-label="Operating model">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-left="settings" title="Settings — configuration requests" aria-label="Settings, configuration requests">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.5-1 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-left="admin" title="Admin — user access" aria-label="Admin, user access">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 3v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3z"/><path d="M9.5 12.2l1.7 1.7 3.5-3.6"/></svg>
+          <span class="badge" aria-hidden="true"></span>
+        </button>
+      </nav>
+
+      <div class="engine-main">
+      <div class="engine-head">
+        <div class="eyebrow">Operating model</div>
+        <h1>Five source systems.<br>One living picture.</h1>
+        <p>CRM holds the contract. Shop tools hold the build. Strativue sits in the middle and composes them — it does not replace those systems.</p>
+      </div>
+
+      <div class="orbit" id="orbit">
+        <svg class="beams" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <line data-id="schedule" x1="50" y1="50" x2="50" y2="8"/>
+          <line data-id="labor" x1="50" y1="50" x2="86" y2="34"/>
+          <line data-id="parts" x1="50" y1="50" x2="82" y2="86"/>
+          <line data-id="budget" x1="50" y1="50" x2="18" y2="86"/>
+          <line data-id="status" x1="50" y1="50" x2="14" y2="34"/>
+        </svg>
+        <button type="button" class="hub" id="hub" title="Reset to full picture" aria-label="Reset to full picture">
+          <div style="text-align:center;">
+            <div class="serif" style="font-size:13px;font-weight:700;letter-spacing:0.5px;">STRATIVUE</div>
+            <small>Intelligence layer</small>
+          </div>
+        </button>
+        <button type="button" class="node n-schedule" data-id="schedule"><div class="dot"></div><div class="label">Schedule</div><div class="tag">Timeline &amp; milestones</div><div class="src">From shop scheduler</div></button>
+        <button type="button" class="node n-labor" data-id="labor"><div class="dot"></div><div class="label">Labor</div><div class="tag">Hours &amp; technicians</div><div class="src">From timekeeping</div></button>
+        <button type="button" class="node n-parts" data-id="parts"><div class="dot"></div><div class="label">Parts &amp; inventory</div><div class="tag">Stock &amp; backorders</div><div class="src">From inventory / ERP</div></button>
+        <button type="button" class="node n-budget" data-id="budget"><div class="dot"></div><div class="label">Budget</div><div class="tag">Cost vs. contract</div><div class="src">From CRM + accounting</div></button>
+        <button type="button" class="node n-status" data-id="status"><div class="dot"></div><div class="label">Vehicle status</div><div class="tag">Build pipeline</div><div class="src">From work-order tracker</div></button>
+      </div>
+
+      <div class="engine-foot">
+        <div class="explainer">
+          <div class="kicker" id="panel-title">Full picture</div>
+          <div class="body" id="panel-body">Strativue reads CRM, the shop scheduler, timekeeping, inventory/ERP, and the work-order tracker. Click a signal to see which system feeds it.</div>
+        </div>
+        <div class="steps">
+          <div class="step"><b><em>1</em> Capture</b>CRM holds the contract and units. Scheduler, timekeeping, inventory, and work orders keep owning the build.</div>
+          <div class="step"><b><em>2</em> Converge</b>Strativue stitches those feeds into one build record per vehicle.</div>
+          <div class="step"><b><em>3</em> Surface</b>The portal shows the composed view — and flags the unit when any signal breaks.</div>
+        </div>
+        <div class="hint">Gold path = selected signal &nbsp;·&nbsp; On the portal: dropdowns, pipeline stages, and vehicle rows are clickable</div>
+      </div>
+
+      <div class="left-panel" id="panel-settings" hidden>
+        <div class="eyebrow">Settings</div>
+        <div class="serif" style="font-size:20px;font-weight:600;margin-top:6px;">Configuration requests</div>
+        <p style="font-size:12.5px;line-height:1.5;color:rgba(252,252,251,0.68);margin:8px 0 12px;">Source connections and refresh rules. Nothing here replaces CRM or shop tools — it only asks what the portal is allowed to read.</p>
+        <div class="req">
+          <div class="who">CRM feed — contract, units, ceiling</div>
+          <div class="meta">Requested by Battleborn ops · pending API credentials</div>
+          <span class="pill wait">Pending</span>
+        </div>
+        <div class="req">
+          <div class="who">Work-order tracker sync</div>
+          <div class="meta">Stage and bay location · every 15 minutes</div>
+          <span class="pill ok">Active</span>
+        </div>
+        <div class="req">
+          <div class="who">Inventory / ERP backorder flag</div>
+          <div class="meta">Configuration request from accounting · waiting on ERP admin</div>
+          <span class="pill wait">Pending</span>
+        </div>
+        <div class="req">
+          <div class="who">Codex refresh window</div>
+          <div class="meta">Compose into SQL · 06:00–20:00 shop time</div>
+          <span class="pill ok">Active</span>
+        </div>
+      </div>
+
+      <div class="left-panel" id="panel-admin" hidden>
+        <div class="eyebrow">Admin</div>
+        <div class="serif" style="font-size:20px;font-weight:600;margin-top:6px;">User access</div>
+        <p style="font-size:12.5px;line-height:1.5;color:rgba(252,252,251,0.68);margin:8px 0 12px;">Each login is tenant-scoped. Access requests wait here until an admin approves — people do not share a generic password.</p>
+        <div class="req">
+          <div class="who">Lt. Ramirez · Commerce City PD</div>
+          <div class="meta">Viewer role · contract dashboard only · requested Sep 12</div>
+          <span class="pill wait">Access request</span>
+        </div>
+        <div class="req">
+          <div class="who">Shop lead · Battleborn</div>
+          <div class="meta">Operator role · all five feeds · last sign-in 2s ago</div>
+          <span class="pill ok">Active</span>
+        </div>
+        <div class="req">
+          <div class="who">Accounting read-only</div>
+          <div class="meta">Budget + CRM ceiling · no work-order write</div>
+          <span class="pill wait">Access request</span>
+        </div>
+        <div class="req">
+          <div class="who">Admin · tenant owner</div>
+          <div class="meta">Approve access and configuration · hashed login</div>
+          <span class="pill ok">Active</span>
+        </div>
+      </div>
+      </div>
+    </aside>
+
+    <section class="portal-wrap">
+      <div class="portal-caption">
+        <h2>What the operator sees</h2>
+        <span id="mode-label">CRM + shop systems, composed</span>
+      </div>
+      <div class="flow-note" id="flow-note">
+        <b>Live composition.</b> CRM, scheduler, timekeeping, inventory, and work orders stay in place. Strativue pulls those feeds into one vehicle row.
+      </div>
+
+      <div class="portal">
+        <div class="p-nav">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="serif" style="font-size:15px;font-weight:700;">STRATIVUE</span>
+            <span style="width:1px;height:16px;background:rgba(255,255,255,.25);"></span>
+            <span style="font-size:12.5px;font-weight:600;">Battleborn Upfitters</span>
+          </div>
+          <div class="tabs" id="nav-tabs">
+            <button type="button" data-view="overview">Overview</button>
+            <button type="button" data-view="vehicles">Vehicles</button>
+            <button type="button" data-view="reports">Reports</button>
+            <button type="button" class="on" data-view="arch">Resources</button>
+          </div>
+          <div class="live"><span class="pulse-dot"></span><span style="color:#fcfcfb;opacity:.8;">Composed 2s ago</span></div>
+        </div>
+
+        <div class="p-chrome">
+          <div class="toolbar">
+            <div>
+              <div style="font-size:16px;font-weight:700;" id="page-title">Resources — backend architecture</div>
+              <div style="font-size:11.5px;color:var(--mute);margin-top:3px;" id="page-sub">Generic small-firm stack · DigitalOcean, Codex refresh, encrypted SQL, multiple logins</div>
+            </div>
+            <div class="toolbar-actions" id="portal-filters" style="display:none">
+              <div class="dd" id="dd-period">
+                <button type="button" class="dd-btn" id="period-btn">This month
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="dd-menu">
+                  <button type="button" data-period="month" class="is-on">This month</button>
+                  <button type="button" data-period="quarter">This quarter</button>
+                  <button type="button" data-period="contract">Contract to date</button>
+                </div>
+              </div>
+              <div class="dd" id="dd-filter">
+                <button type="button" class="dd-btn" id="filter-btn">All stages
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="dd-menu">
+                  <button type="button" data-stage="" class="is-on">All stages</button>
+                  <button type="button" data-stage="Intake">Intake</button>
+                  <button type="button" data-stage="Parts staging">Parts staging</button>
+                  <button type="button" data-stage="Labor &amp; install">Labor &amp; install</button>
+                  <button type="button" data-stage="Quality check">Quality check</button>
+                  <button type="button" data-stage="Ready">Ready</button>
+                  <button type="button" data-stage="flagged">Flagged only</button>
+                </div>
+              </div>
+              <div class="dd" id="dd-export">
+                <button type="button" class="ghost-btn">Export
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="dd-menu">
+                  <div class="hint-row">Sample actions — nothing leaves this page</div>
+                  <button type="button" data-export="pdf">Download PDF snapshot</button>
+                  <button type="button" data-export="csv">Download vehicle CSV</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-body">
+          <div class="view" id="view-overview" hidden>
+          <div class="kpis">
+            <div class="kpi widget" data-signals="status" data-click="status">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#898781" stroke-width="1.7"><path d="M3 16V8a1 1 0 0 1 1-1h9l4 4h3a1 1 0 0 1 1 1v4" stroke-linejoin="round"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>
+              <div class="n tnum" id="kpi-active">14</div>
+              <div class="s">Active builds · of 18 contracted</div>
+              <div class="from">From work-order tracker · unit list from CRM</div>
+            </div>
+            <div class="kpi widget" data-signals="schedule" data-click="schedule">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#898781" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="1.5"/><path d="M4 9.5h16M8 3v3.2M16 3v3.2" stroke-linecap="round"/></svg>
+              <div class="n tnum" id="kpi-sched">79%</div>
+              <div class="s">On schedule · click to isolate dates</div>
+              <div class="flag" style="color:var(--crit);" id="kpi-flag">3 units flagged from timeline drift</div>
+              <div class="from">From shop scheduler · promised dates from CRM</div>
+            </div>
+            <div class="kpi widget" data-signals="budget labor parts" data-click="budget">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#898781" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9" stroke-linecap="round"/></svg>
+              <div class="n tnum" id="kpi-budg">68%</div>
+              <div class="s" id="kpi-budg-s">Budget utilized · $187,400 of $275,000</div>
+              <div class="bar"><i id="kpi-budg-bar" style="width:68%"></i></div>
+              <div class="from">From CRM contract ceiling + accounting actuals</div>
+            </div>
+            <div class="kpi widget" data-signals="parts labor schedule" data-click="parts">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#898781" stroke-width="1.7"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/><path d="M12 10v4.5" stroke-linecap="round"/></svg>
+              <div class="n tnum" id="kpi-iss">3</div>
+              <div class="s">Open issues · click to show flagged units</div>
+              <div class="from">Composed from inventory, timekeeping, and scheduler</div>
+            </div>
+          </div>
+
+          <div class="card widget" data-signals="status schedule">
+            <h3>Build pipeline <span style="font-weight:500;color:var(--mute);font-size:11px;">— from the work-order tracker · click a stage to filter</span></h3>
+            <div class="pipe" id="pipeline"></div>
+          </div>
+
+          <div class="lower">
+            <div class="card widget" data-signals="status schedule labor parts" style="padding:0;overflow:hidden;">
+              <h3 style="padding:12px 14px 0;">Vehicle builds — click a row for the composed record</h3>
+              <table>
+                <thead><tr><th>Unit</th><th>Stage</th><th>Done</th><th>Target</th><th>Why it looks like this</th></tr></thead>
+                <tbody id="tbody-overview"></tbody>
+              </table>
+              <div class="foot-note" id="table-foot"></div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div class="card widget" data-signals="budget labor parts">
+                <h3>Budget — labor + parts + overhead <span style="font-weight:500;color:var(--mute);font-size:11px;">CRM ceiling · accounting actuals</span></h3>
+                <div style="display:flex;height:12px;border-radius:4px;overflow:hidden;gap:2px;">
+                  <div style="width:52.6%;background:#2a78d6;"></div>
+                  <div style="width:38%;background:#eb6834;"></div>
+                  <div style="width:9.4%;background:#1baf7a;"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12px;">
+                  <div style="display:flex;justify-content:space-between;"><span>Labor</span><b class="tnum" id="b-labor">$98,600</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span>Parts</span><b class="tnum" id="b-parts">$71,200</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span>Overhead</span><b class="tnum" id="b-oh">$17,600</b></div>
+                </div>
+              </div>
+              <div class="card widget" data-signals="parts labor schedule" id="issues-card">
+                <h3>Open issues — click to open the unit</h3>
+                <div id="issues-list"></div>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div class="view" id="view-vehicles" hidden>
+            <div class="card" style="padding:0;overflow:hidden;">
+              <h3 style="padding:12px 14px 0;">All units on this contract</h3>
+              <table>
+                <thead><tr><th>Unit</th><th>Vehicle</th><th>Stage</th><th>Done</th><th>Target</th><th>Status</th></tr></thead>
+                <tbody id="tbody-vehicles"></tbody>
+              </table>
+              <div class="foot-note">Click any row to open the unit. Use the stage dropdown to filter.</div>
+            </div>
+          </div>
+
+          <div class="view" id="view-reports" hidden>
+            <div class="card">
+              <h3 id="report-h">Report snapshot — this month</h3>
+              <p style="font-size:13px;line-height:1.55;color:var(--mute);margin:8px 0 14px;">This is the same composition as Overview, rolled up for a status meeting. Change the period dropdown to see the numbers move.</p>
+              <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+                <div class="kpi"><div class="s">On schedule</div><div class="n tnum" id="r-sched">79%</div></div>
+                <div class="kpi"><div class="s">Spend vs contract</div><div class="n tnum" id="r-spend">$187,400</div></div>
+                <div class="kpi"><div class="s">Units at risk</div><div class="n tnum" id="r-risk">3</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-arch">
+            <div class="arch">
+              <div class="arch-row r3">
+                <button type="button" class="arch-box" data-arch="logins">
+                  <div class="k">Identity</div>
+                  <div class="t">Multiple logins</div>
+                  <div class="d">Shop users, agency viewers, and admins. Each session is tenant-scoped.</div>
+                </button>
+                <button type="button" class="arch-box" data-arch="tls">
+                  <div class="k">In transit <span class="lock">TLS</span></div>
+                  <div class="t">HTTPS into DigitalOcean</div>
+                  <div class="d">Browser to load balancer is encrypted. No portal traffic in the clear.</div>
+                </button>
+                <button type="button" class="arch-box" data-arch="do">
+                  <div class="k">Host</div>
+                  <div class="t">DigitalOcean</div>
+                  <div class="d">App Platform or droplets plus a managed load balancer. Typical small-firm footprint.</div>
+                </button>
+              </div>
+              <div class="arch-arrow">encrypted hop · app and jobs never sit on the public SQL port</div>
+              <div class="arch-row r2">
+                <button type="button" class="arch-box" data-arch="app">
+                  <div class="k">Portal API</div>
+                  <div class="t">Application layer</div>
+                  <div class="d">Serves the dashboard. Reads SQL for the signed-in tenant. Does not talk to CRM on every page load.</div>
+                </button>
+                <button type="button" class="arch-box" data-arch="codex">
+                  <div class="k">Refresh</div>
+                  <div class="t">Codex jobs</div>
+                  <div class="d">Scheduled pull from CRM, scheduler, timekeeping, inventory, and work orders. Writes the composed record back to SQL.</div>
+                </button>
+              </div>
+              <div class="arch-arrow">composed rows written over an encrypted database connection</div>
+              <div class="arch-row r1">
+                <button type="button" class="arch-box" data-arch="sql">
+                  <div class="k">System of record for the portal <span class="lock">at rest</span></div>
+                  <div class="t">Managed SQL database</div>
+                  <div class="d">PostgreSQL (or similar) on DigitalOcean. Disk encrypted. Passwords stored as hashes, not plaintext. Each login only sees its tenant_id.</div>
+                </button>
+              </div>
+              <div class="arch-detail" id="arch-detail">
+                <h3>How a refresh works</h3>
+                <p>Click a box. This is the generic pattern small shops use: DigitalOcean hosts the app, Codex jobs refresh source systems into SQL, TLS covers the wire, and the database encrypts disks. Multiple people can sign in without sharing one password or one data pile.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer" id="drawer" hidden>
+          <div class="drawer-scrim" data-close-drawer></div>
+          <aside class="drawer-panel" role="dialog" aria-labelledby="d-id">
+            <div class="drawer-head">
+              <div>
+                <div class="serif" style="font-size:18px;font-weight:700;" id="d-id">BB-105</div>
+                <div style="font-size:12.5px;color:var(--mute);margin-top:3px;" id="d-vehicle"></div>
+              </div>
+              <button type="button" class="dd-btn" data-close-drawer>Close</button>
+            </div>
+            <div class="sig-grid">
+              <div class="sig"><div class="k">Vehicle status · work-order tracker</div><div class="v" id="d-stage"></div><div class="d" id="d-pct"></div></div>
+              <div class="sig"><div class="k">Schedule · shop scheduler / CRM</div><div class="v" id="d-target"></div><div class="d" id="d-sched"></div></div>
+              <div class="sig"><div class="k">Labor · timekeeping</div><div class="v" id="d-labor"></div><div class="d" id="d-labor-d"></div></div>
+              <div class="sig"><div class="k">Parts · inventory / ERP</div><div class="v" id="d-parts"></div><div class="d" id="d-parts-d"></div></div>
+              <div class="sig"><div class="k">Budget · CRM + accounting</div><div class="v" id="d-budget"></div><div class="d">Rolled from labor + parts + overhead on this unit</div></div>
+            </div>
+            <p style="font-size:13px;line-height:1.55;margin:16px 0 0;color:var(--mute);" id="d-note"></p>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const SIGNALS = {
+    schedule: {
+      label: 'Schedule',
+      blurb: 'Contracted delivery dates start in CRM. Day-to-day stage gates live in the shop scheduler. Strativue reads both as the clock — it does not replace either calendar.',
+      lands: 'Pulled from the shop scheduler (and CRM promised dates). Lands on the on-schedule KPI, pipeline dates, and the Target column.',
+      mode: 'From shop scheduler + CRM dates'
+    },
+    labor: {
+      label: 'Labor',
+      blurb: 'Technician hours stay in timekeeping. Strativue rolls those hours against the hours the CRM contract assumed, per unit and in total.',
+      lands: 'Pulled from timekeeping. Lands on the budget tile, BB-107’s warning, and the issues stack.',
+      mode: 'From timekeeping'
+    },
+    parts: {
+      label: 'Parts & inventory',
+      blurb: 'Stock, POs, and backorders stay in inventory / ERP. The moment a kit is backordered, Strativue attaches that fact to the vehicle already on a work order.',
+      lands: 'Pulled from inventory / ERP. Lands on BB-105’s red row, the critical issue, and the budget parts slice.',
+      mode: 'From inventory / ERP'
+    },
+    budget: {
+      label: 'Budget',
+      blurb: 'The contract ceiling lives in CRM. Actuals come from accounting as labor and parts post. Strativue composes spend against that ceiling — not a third spreadsheet.',
+      lands: 'Pulled from CRM (ceiling) plus accounting (actuals). Lands on the 68% utilized tile and the breakdown card.',
+      mode: 'From CRM + accounting'
+    },
+    status: {
+      label: 'Vehicle status',
+      blurb: 'CRM knows the unit is on the contract. The work-order / build tracker knows which bay and stage it is in. Strativue hangs every other feed off that unit record.',
+      lands: 'Pulled from the work-order tracker. Lands on the active-build count, the five-stage pipeline, and the vehicle table.',
+      mode: 'From work-order tracker'
+    }
+  };
+
+  const VEHICLES = [
+    { id:'BB-101', vehicle:'Ford PI Utility', stage:'Ready', pct:100, target:'Sep 18', flag:'ok', why:'All signals green',
+      labor:'118 of 120 hrs', laborD:'Within band', parts:'Installed', partsD:'No open POs', budget:'$14,200',
+      note:'Ready for delivery. Every signal is green on this unit.' },
+    { id:'BB-102', vehicle:'Chevy Tahoe PPV', stage:'Quality check', pct:91, target:'Sep 22', flag:'ok', why:'On track',
+      labor:'96 of 110 hrs', laborD:'On pace', parts:'Installed', partsD:'QC punch list only', budget:'$13,400',
+      note:'In quality check against a Sep 22 target.' },
+    { id:'BB-103', vehicle:'Ford PI Utility', stage:'Quality check', pct:88, target:'Sep 24', flag:'ok', why:'On track',
+      labor:'101 of 110 hrs', laborD:'On pace', parts:'Installed', partsD:'Two punch items', budget:'$13,150',
+      note:'Quality check, still inside the date window.' },
+    { id:'BB-104', vehicle:'Ford PI Utility', stage:'Labor & install', pct:62, target:'Oct 3', flag:'ok', why:'Hours and parts in band',
+      labor:'71 of 115 hrs', laborD:'On pace for Oct 3', parts:'On hand', partsD:'Cage kit staged', budget:'$9,800',
+      note:'Install in progress. Labor and parts are both inside the contract assumption.' },
+    { id:'BB-105', vehicle:'Chevy Tahoe PPV', stage:'Labor & install', pct:55, target:'Oct 6', flag:'crit', why:'Parts backorder → schedule slip',
+      labor:'74 of 80 hrs', laborD:'Hours still in band', parts:'Console kit backordered', partsD:'Est. 5-day delay', budget:'$11,050',
+      note:'The parts signal broke first. Schedule and status followed on the same row — that is the composition.' },
+    { id:'BB-107', vehicle:'Ford PI Utility', stage:'Labor & install', pct:47, target:'Oct 12', flag:'warn', why:'Labor 15% over budgeted hours',
+      labor:'92 of 80 hrs', laborD:'15% over budgeted', parts:'On hand', partsD:'No parts delay', budget:'$12,400',
+      note:'Overtime on this unit is a labor event that also moved the budget tile.' },
+    { id:'BB-109', vehicle:'Ford PI Utility', stage:'Parts staging', pct:24, target:'Oct 18', flag:'ok', why:'On track',
+      labor:'12 of 115 hrs', laborD:'Not yet in install', parts:'Staging', partsD:'Lightbar due Sep 19', budget:'$4,100',
+      note:'Waiting on remaining parts before labor starts.' },
+    { id:'BB-110', vehicle:'Chevy Tahoe PPV', stage:'Parts staging', pct:22, target:'Oct 20', flag:'warn', why:'2 days behind target',
+      labor:'8 of 110 hrs', laborD:'Idle until parts', parts:'Radio package late', partsD:'Watch item', budget:'$3,850',
+      note:'On watch: parts ETA slipped two days against the stage gate.' },
+    { id:'BB-112', vehicle:'Chevy Tahoe PPV', stage:'Intake', pct:8, target:'Oct 29', flag:'ok', why:'On track',
+      labor:'0 of 110 hrs', laborD:'Not released', parts:'Not staged', partsD:'VIN in receiving', budget:'$620',
+      note:'Just received. Status is the only signal with substance yet.' },
+    { id:'BB-113', vehicle:'Ford PI Utility', stage:'Intake', pct:6, target:'Oct 30', flag:'ok', why:'On track',
+      labor:'0 of 115 hrs', laborD:'Not released', parts:'Not staged', partsD:'VIN in receiving', budget:'$410',
+      note:'Intake complete; waiting to enter parts staging.' }
+  ];
+
+  const STAGES = [
+    { name:'Intake', color:'#86b6ef' },
+    { name:'Parts staging', color:'#5598e7' },
+    { name:'Labor & install', color:'#2a78d6' },
+    { name:'Quality check', color:'#1c5cab' },
+    { name:'Ready', color:'#104281' }
+  ];
+
+  const PERIODS = {
+    month: { label:'This month', sched:'79%', flag:'3 units flagged from timeline drift', budg:'68%', budgS:'Budget utilized · $187,400 of $275,000', bar:68, labor:'$98,600', parts:'$71,200', oh:'$17,600', spend:'$187,400', risk:3 },
+    quarter: { label:'This quarter', sched:'74%', flag:'4 units flagged this quarter', budg:'61%', budgS:'Budget utilized · $167,900 of $275,000', bar:61, labor:'$88,200', parts:'$64,100', oh:'$15,600', spend:'$167,900', risk:4 },
+    contract: { label:'Contract to date', sched:'71%', flag:'3 units currently off the date', budg:'68%', budgS:'Budget utilized · $187,400 of $275,000', bar:68, labor:'$98,600', parts:'$71,200', oh:'$17,600', spend:'$187,400', risk:3 }
+  };
+
+  const ISSUES = [
+    { id:'BB-105', tone:'#d03b3b', text:'console kit backordered. Parts signal moved; schedule and status followed.' },
+    { id:'BB-107', tone:'#c98500', text:'labor hours 15% over. Budget tile and this row both moved.' },
+    { id:'BB-110', tone:'#c98500', text:'on watch, 2 days behind target.' }
+  ];
+
+  const orbit = document.getElementById('orbit');
+  const hub = document.getElementById('hub');
+  const panelTitle = document.getElementById('panel-title');
+  const panelBody = document.getElementById('panel-body');
+  const flowNote = document.getElementById('flow-note');
+  const modeLabel = document.getElementById('mode-label');
+  const widgets = [...document.querySelectorAll('.widget')];
+  const nodes = [...document.querySelectorAll('.node')];
+  const lines = [...document.querySelectorAll('.beams line')];
+  const drawer = document.getElementById('drawer');
+
+  let selected = null;
+  let view = 'arch';
+  let period = 'month';
+  let stageFilter = '';
+  let openUnit = null;
+
+  function select(id) {
+    selected = id;
+    const active = id ? SIGNALS[id] : null;
+    orbit.classList.toggle('is-filtered', !!id);
+    nodes.forEach((n) => n.classList.toggle('is-on', n.dataset.id === id));
+    lines.forEach((l) => l.classList.toggle('on', l.dataset.id === id));
+    widgets.forEach((w) => {
+      const ids = (w.dataset.signals || '').split(/\s+/);
+      const lit = !!id && ids.includes(id);
+      w.classList.toggle('lit', lit);
+      w.classList.toggle('dim', !!id && !lit);
+    });
+    panelTitle.textContent = active ? active.label : 'Full picture';
+    panelBody.textContent = active
+      ? active.blurb
+      : 'Strativue reads CRM, the shop scheduler, timekeeping, inventory/ERP, and the work-order tracker. Click a signal to see which system feeds it.';
+    flowNote.innerHTML = active
+      ? `<b>Feed: ${active.mode.replace('From ','')}</b> ${active.lands}`
+      : `<b>Live composition.</b> CRM, scheduler, timekeeping, inventory, and work orders stay in place. Strativue pulls those feeds into one vehicle row.`;
+    modeLabel.textContent = active ? active.mode : 'CRM + shop systems, composed';
+  }
+
+  function filtered() {
+    return VEHICLES.filter((v) => {
+      if (stageFilter === 'flagged') return v.flag !== 'ok';
+      if (stageFilter) return v.stage === stageFilter;
+      return true;
+    });
+  }
+
+  function statusHtml(v) {
+    if (v.flag === 'crit') return `<span style="color:var(--crit);font-weight:600;">${v.why}</span>`;
+    if (v.flag === 'warn') return `<span style="color:var(--warn);font-weight:600;">${v.why}</span>`;
+    return `<span style="color:var(--ok);font-weight:600;">${v.why}</span>`;
+  }
+
+  function rowHtml(v, extra) {
+    const cls = 'click' + (v.flag === 'crit' ? ' alert' : v.flag === 'warn' ? ' warn' : '') + (openUnit === v.id ? ' is-on' : '');
+    return `<tr class="${cls}" data-unit="${v.id}">
+      <td><b>${v.id}</b></td>${extra || ''}
+      <td>${v.stage}</td>
+      <td><div class="prog"><div class="track"><i style="width:${v.pct}%"></i></div>${v.pct}%</div></td>
+      <td>${v.target}</td>
+      <td>${statusHtml(v)}</td>
+    </tr>`;
+  }
+
+  function renderPipeline() {
+    document.getElementById('pipeline').innerHTML = STAGES.map((s) => {
+      const units = VEHICLES.filter((v) => v.stage === s.name);
+      const on = stageFilter === s.name ? ' is-on' : '';
+      const chips = units.slice(0, 2).map((u) => `<span class="chip">${u.id}</span>`).join('')
+        + (units.length > 2 ? `<span class="chip">+${units.length - 2}</span>` : '');
+      return `<button type="button" class="stage-col${on}" data-stage="${s.name}">
+        <div class="nm">${s.name}</div><div class="n tnum">${units.length}</div>
+        <div class="strip" style="background:${s.color};"></div>
+        <div class="chips">${chips}</div>
+      </button>`;
+    }).join('');
+  }
+
+  function renderTables() {
+    const rows = filtered();
+    const ov = view === 'overview' ? rows.slice(0, 6) : rows;
+    document.getElementById('tbody-overview').innerHTML = ov.length
+      ? ov.map((v) => rowHtml(v)).join('')
+      : `<tr><td colspan="5" class="empty">No units in this filter. Choose All stages.</td></tr>`;
+    document.getElementById('tbody-vehicles').innerHTML = rows.length
+      ? rows.map((v) => rowHtml(v, `<td>${v.vehicle}</td>`)).join('')
+      : `<tr><td colspan="6" class="empty">No units in this filter.</td></tr>`;
+    document.getElementById('table-foot').textContent =
+      `Showing ${ov.length} of ${VEHICLES.length} · click a row to open the unit`;
+  }
+
+  function renderIssues() {
+    document.getElementById('issues-list').innerHTML = ISSUES.map((i) =>
+      `<button type="button" class="issue" data-unit="${i.id}" style="width:100%;border:0;background:transparent;text-align:left;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${i.tone}" stroke-width="2.2"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/></svg>
+        <div><b>${i.id}</b> — ${i.text}</div>
+      </button>`
+    ).join('');
+  }
+
+  function applyPeriod() {
+    const p = PERIODS[period];
+    document.getElementById('period-btn').innerHTML = p.label + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>';
+    document.getElementById('kpi-sched').textContent = p.sched;
+    document.getElementById('kpi-flag').textContent = p.flag;
+    document.getElementById('kpi-budg').textContent = p.budg;
+    document.getElementById('kpi-budg-s').textContent = p.budgS;
+    document.getElementById('kpi-budg-bar').style.width = p.bar + '%';
+    document.getElementById('b-labor').textContent = p.labor;
+    document.getElementById('b-parts').textContent = p.parts;
+    document.getElementById('b-oh').textContent = p.oh;
+    document.getElementById('r-sched').textContent = p.sched;
+    document.getElementById('r-spend').textContent = p.spend;
+    document.getElementById('r-risk').textContent = p.risk;
+    document.getElementById('report-h').textContent = 'Report snapshot — ' + p.label.toLowerCase();
+    document.querySelectorAll('#dd-period [data-period]').forEach((b) => b.classList.toggle('is-on', b.dataset.period === period));
+  }
+
+  function setStage(name) {
+    stageFilter = stageFilter === name ? '' : name;
+    const label = !stageFilter ? 'All stages' : stageFilter === 'flagged' ? 'Flagged only' : stageFilter;
+    document.getElementById('filter-btn').innerHTML = label + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>';
+    document.querySelectorAll('#dd-filter [data-stage]').forEach((b) => b.classList.toggle('is-on', b.dataset.stage === stageFilter));
+    renderPipeline();
+    renderTables();
+    if (name && name !== 'flagged') select('status');
+    if (name === 'flagged') select('parts');
+  }
+
+  const ARCH = {
+    logins: {
+      title: 'Multiple logins',
+      body: 'Each person gets their own account. Passwords are stored as one-way hashes in SQL, never as the password itself. A session cookie (or token) is issued over TLS. A tenant_id on every row means Battleborn staff see shop data and a CCPD viewer only sees what that tenant is allowed to see. People do not share a generic login.'
+    },
+    tls: {
+      title: 'Encryption in transit',
+      body: 'The browser talks HTTPS to a DigitalOcean load balancer. That is TLS on the wire — the same pattern almost every small SaaS uses. The app and the SQL database are not exposed as open public ports. Credentials and vehicle data are not sent in the clear.'
+    },
+    do: {
+      title: 'DigitalOcean',
+      body: 'Typical small-firm hosting: App Platform or a droplet for the portal, a worker for refresh jobs, and a managed database. DigitalOcean holds the VMs, the load balancer, disk encryption for the database, and encrypted environment variables for API keys. Nothing here requires an enterprise cloud to explain the idea.'
+    },
+    app: {
+      title: 'Portal API',
+      body: 'Page loads hit the application, which reads the already-composed rows from SQL for that login. It does not fan out to CRM, timekeeping, and inventory on every refresh of the dashboard. That is why the portal can stay fast with several people signed in at once.'
+    },
+    codex: {
+      title: 'Codex refresh jobs',
+      body: 'A scheduled Codex job pulls CRM (contract, units, ceiling), the shop scheduler, timekeeping, inventory/ERP, and the work-order tracker. It writes one composed vehicle record into SQL. The portal then just reads SQL. If a source is late, the last good compose stays up until the next successful job.'
+    },
+    sql: {
+      title: 'Encrypted SQL',
+      body: 'Managed PostgreSQL (or similar) on DigitalOcean. Disks are encrypted at rest by the provider. Connections from the app use TLS. Passwords are hashes. Application data is keyed by tenant_id. This is the generic pattern: encrypt the disk, encrypt the wire, hash credentials, isolate tenants. It is not a custom crypto product — it is how small firms keep a portal from leaking across logins.'
+    }
+  };
+
+  function setView(name) {
+    view = name;
+    document.querySelectorAll('#nav-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.view === name));
+    document.getElementById('view-overview').hidden = name !== 'overview';
+    document.getElementById('view-vehicles').hidden = name !== 'vehicles';
+    document.getElementById('view-reports').hidden = name !== 'reports';
+    document.getElementById('view-arch').hidden = name !== 'arch';
+    document.getElementById('portal-filters').style.display = name === 'arch' ? 'none' : '';
+    const titles = {
+      overview: ['Commerce City PD Contract — Build Overview', '18-vehicle contract · click a tile, stage, or row to drill in'],
+      vehicles: ['Vehicle register', 'Every unit on the contract · same composition, list view'],
+      reports: ['Status report', 'Period rollup of the same five signals'],
+      arch: ['Resources — backend architecture', 'Generic small-firm stack · DigitalOcean, Codex refresh, encrypted SQL, multiple logins']
+    };
+    document.getElementById('page-title').textContent = titles[name][0];
+    document.getElementById('page-sub').textContent = titles[name][1];
+    if (name !== 'arch') renderTables();
+  }
+
+  function openDrawer(id) {
+    const v = VEHICLES.find((x) => x.id === id);
+    if (!v) return;
+    openUnit = id;
+    document.getElementById('d-id').textContent = v.id;
+    document.getElementById('d-vehicle').textContent = v.vehicle;
+    document.getElementById('d-stage').textContent = v.stage;
+    document.getElementById('d-pct').textContent = v.pct + '% complete';
+    document.getElementById('d-target').textContent = 'Target ' + v.target;
+    document.getElementById('d-sched').textContent = v.flag === 'ok' ? 'Inside the window' : v.why;
+    document.getElementById('d-labor').textContent = v.labor;
+    document.getElementById('d-labor-d').textContent = v.laborD;
+    document.getElementById('d-parts').textContent = v.parts;
+    document.getElementById('d-parts-d').textContent = v.partsD;
+    document.getElementById('d-budget').textContent = v.budget;
+    document.getElementById('d-note').textContent = v.note;
+    drawer.hidden = false;
+    renderTables();
+  }
+
+  function closeDrawer() {
+    openUnit = null;
+    drawer.hidden = true;
+    renderTables();
+  }
+
+  function closeMenus(except) {
+    document.querySelectorAll('.dd').forEach((d) => { if (d !== except) d.classList.remove('open'); });
+  }
+
+  nodes.forEach((n) => n.addEventListener('click', () => select(n.dataset.id)));
+  hub.addEventListener('click', () => select(null));
+
+  document.querySelectorAll('[data-click]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.click;
+      if (id === 'parts') setStage('flagged');
+      else if (id === 'status') { stageFilter = ''; setStage(''); select('status'); }
+      else select(id);
+    });
+  });
+
+  document.getElementById('nav-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-view]');
+    if (b) setView(b.dataset.view);
+  });
+
+  document.querySelectorAll('.dd > button').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = btn.parentElement;
+      const was = wrap.classList.contains('open');
+      closeMenus();
+      wrap.classList.toggle('open', !was);
+    });
+  });
+
+  document.getElementById('dd-period').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-period]');
+    if (!b) return;
+    period = b.dataset.period;
+    applyPeriod();
+    closeMenus();
+  });
+
+  document.getElementById('dd-filter').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-stage]');
+    if (!b) return;
+    stageFilter = '';
+    setStage(b.dataset.stage);
+    closeMenus();
+  });
+
+  document.getElementById('dd-export').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-export]');
+    if (!b) return;
+    closeMenus();
+    flowNote.innerHTML = `<b>Export (sample).</b> ${b.dataset.export === 'csv' ? 'A CSV of the current vehicle filter' : 'A PDF of this composed view'} would generate here. Nothing is downloaded in this mockup.`;
+  });
+
+  document.getElementById('pipeline').addEventListener('click', (e) => {
+    const col = e.target.closest('[data-stage]');
+    if (col) setStage(col.dataset.stage);
+  });
+
+  document.body.addEventListener('click', (e) => {
+    const unit = e.target.closest('[data-unit]');
+    if (unit && unit.closest('.portal')) openDrawer(unit.dataset.unit);
+    if (e.target.closest('[data-close-drawer]')) closeDrawer();
+    if (!e.target.closest('.dd')) closeMenus();
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); closeMenus(); } });
+
+  document.getElementById('view-arch').addEventListener('click', (e) => {
+    const box = e.target.closest('[data-arch]');
+    if (!box) return;
+    const item = ARCH[box.dataset.arch];
+    if (!item) return;
+    document.querySelectorAll('.arch-box').forEach((b) => b.classList.toggle('is-on', b === box));
+    document.getElementById('arch-detail').innerHTML = '<h3>' + item.title + '</h3><p>' + item.body + '</p>';
+  });
+
+  document.querySelector('.engine-rail').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-left]');
+    if (!btn) return;
+    const mode = btn.dataset.left;
+    document.querySelectorAll('.engine-rail [data-left]').forEach((b) => b.classList.toggle('is-on', b === btn));
+    document.getElementById('orbit').hidden = mode !== 'model';
+    document.querySelector('.engine-foot').hidden = mode !== 'model';
+    document.getElementById('panel-settings').hidden = mode !== 'settings';
+    document.getElementById('panel-admin').hidden = mode !== 'admin';
+  });
+
+  renderPipeline();
+  renderIssues();
+  applyPeriod();
+  renderTables();
+  setView('arch');
+</script>
+</body>
+</html>
